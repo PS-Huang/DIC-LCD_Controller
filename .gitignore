@@ -1,0 +1,11 @@
+*.mti
+*.zip
+transcript
+
+file/Report.docx
+work/
+dat/
+work/
+mem/
+file/testfixture.sv.bak
+file/DIC_hw2.mpf
