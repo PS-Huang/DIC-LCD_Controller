@@ -43,7 +43,7 @@ methods are detailed in the following sections.
 ### Function Description
 The controller must process user input commands to determine the display coordinates (origin) and data parameters, enabling functions such as shifting and averaging. The original 8*8 grayscale image is stored in the off-chip IROM, the LCD controller can fetch the image from IROM through related buses. Once the image processing operations are completed, the processed image data is written to the off-chip IRAM through related buses and pull done signal high to let Host know the task is completed. 
 
-![image](https://github.com/user-attachments/assets/e81fee5d-dc30-4eae-b5ce-14fdc39bf273)
+![image](https://github.com/user-attachments/assets/2bee0756-22cc-4ae2-ab64-62a553b82271)
 
 ### Command Description
 
@@ -63,19 +63,19 @@ The controller must process user input commands to determine the display coordin
 * When `IROM_rd` is high (e.g. T1 and T2 time periods), the IROM will immediately send the data from the address specified by the `IROM_A` signal to the LCD_CTRL via the `IROM_Q` bus.
 * When `IROM_rd` is low (e.g. T3 time periods), the IROM will not perform any action. In addition, no read delay is considered for this memory.
 
-![image](https://github.com/user-attachments/assets/f319ec8d-2607-45cf-ace6-a514c93d2172)
+![image](https://github.com/user-attachments/assets/d68eaadd-905d-4e4a-ac35-fb500eeaddb8)
 
 * When `IRAM_ceb` is high (e.g. T4 time periods), the IRAM will determine the operation based on the `IRAM_web` signal.
 * The Host will trigger the read/write operation **on the falling edge** of the clock signal at T5 and stop when `IRAM_ceb` be pulled down at T6.
 
-![image](https://github.com/user-attachments/assets/2338e7e3-3008-4684-8863-75c5a06b4d3b)
+![image](https://github.com/user-attachments/assets/35326334-e340-4bd4-9388-8615e6191548)
 
 * During any processing operation, the `busy` signal remains high to indicate that the controller is actively executing a command and cannot accept new inputs. Once the operation is completed, `busy` is deasserted (set low), signaling that the controller is ready to receive the next command. 
   
-![image](https://github.com/user-attachments/assets/71055b8c-a073-47e5-b593-3b69858eebd9)
+![image](https://github.com/user-attachments/assets/d6d00597-7d43-41ed-a355-a14f4179cb9d)
 
 * When `IRAM_ceb` is high and `IRAM_web` is low, it indicates a write operation to IRAM. At this moment, the address signal can be provided to store the image data into IRAM.
 * After the write operation is completed, the `done` signal is set to high at T7, indicating that the write process is finished. At this point, the test fixture will compare the data written to IRAM with the golden pattern for verification.
 
-![image](https://github.com/user-attachments/assets/e25c0f4c-70bb-4f6b-a55f-db0f85966b86)
+![image](https://github.com/user-attachments/assets/eb445847-d6a5-4a5f-abaf-ede7b1a2e0cd)
 
