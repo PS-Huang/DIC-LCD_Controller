@@ -6,16 +6,16 @@ module LCD_CTRL(
     output reg IROM_rd,
     output reg [5:0] IROM_A,
     input [7:0] IROM_Q,
-    output reg IRAM_ceb, // chip enable signal, indicates the IRAM is available for R/W
+    output reg IRAM_ceb,      // chip enable signal, indicates the IRAM is available for R/W
     output reg [5:0] IRAM_A,
     output reg [7:0] IRAM_D,
-    output reg IRAM_web, // R/W select signal, 0 -> write; 1 -> read
+    output reg IRAM_web,      // R/W select signal, 0 -> write; 1 -> read
     input [7:0] IRAM_Q,
     output reg busy,
     output reg done
 );
 
-    // FSM States
+    // Finite State Machine States
     parameter IDLE = 3'd0;
     parameter LOAD_IMAGE = 3'd1;
     parameter PROCESSING = 3'd2;
@@ -24,29 +24,24 @@ module LCD_CTRL(
 
     reg [2:0] state, next_state;
 
-    // Image buffer: 8x8 image
+    // Image buffer (8x8 image) and Point coordinates
     reg [7:0] image [0:7][0:7];
-
-    // Load counter
-    reg [6:0] load_cnt;
-
-    // Point coordinates
     reg [2:0] op_x, op_y;
 
-    // Current Command
-    reg [3:0] current_cmd;
-
-    // Write counter
+    // Load and Write counter
+    reg [6:0] load_cnt;
     reg [6:0] write_cnt;
-    
-    // Processing 會使用到的變數
+
+    // Processing state 會使用到的變數
     integer i, j;
     reg [7:0] temp_value;
     reg [15:0] sum;
 
-    // Sequential logic -> control processing
+    // Sequential logic -> control processing state
     always @(posedge clk or posedge rst) begin
-        // Initialization
+        state <= IDLE;
+        next_state <= IDLE;
+        // testbench 一開始設 rst 為 high，因此會先進來 LOAD_IMAGE
         if (rst) begin
             state <= LOAD_IMAGE;
             op_x <= 3'd4;
@@ -66,15 +61,22 @@ module LCD_CTRL(
             end
 
             if (state == PROCESSING)  begin
-                current_cmd <= cmd;
                 case (cmd)
+                    /* 因為要到 WRITE_IMAGE state 才會使用到 write_cnt
+                     * 所以在 Processing state 就做初始化就好 主要是為了把條件寫滿
+                     */ 
 					4'd0: write_cnt <= 0;
-                    4'd1: if (op_y > 3'd2) op_y <= op_y - 1;        // Shift Up
-                    4'd2: if (op_y < 3'd6) op_y <= op_y + 1;        // Shift Down
-                    4'd3: if (op_x > 3'd2) op_x <= op_x - 1;        // Shift Left
-                    4'd4: if (op_x < 3'd6) op_x <= op_x + 1;        // Shift Right
-                    4'd5: begin // Max
-                        temp_value = image[op_y-1][op_x-1];
+                    // Shift Up
+                    4'd1: if (op_y > 3'd2) op_y <= op_y - 1;
+                    // Shift Down
+                    4'd2: if (op_y < 3'd6) op_y <= op_y + 1;
+                    // Shift Left
+                    4'd3: if (op_x > 3'd2) op_x <= op_x - 1;
+                    // Shift Right
+                    4'd4: if (op_x < 3'd6) op_x <= op_x + 1;
+                    // Max
+                    4'd5: begin 
+                        temp_value = image[op_y][op_x]; // 一開始隨意設4*4矩陣內的某個值
                         for (i = op_y-2; i <= op_y+1; i = i + 1)
                             for (j = op_x-2; j <= op_x+1; j = j + 1)
                                 if (image[i][j] > temp_value)
@@ -83,8 +85,9 @@ module LCD_CTRL(
                             for (j = op_x-2; j <= op_x+1; j = j + 1)
                                 image[i][j] <= temp_value;
                     end
-                    4'd6: begin // Min
-                        temp_value = image[op_y-1][op_x-1];
+                    // Min
+                    4'd6: begin 
+                        temp_value = image[op_y][op_x];
                         for (i = op_y-2; i <= op_y+1; i = i + 1)
                             for (j = op_x-2; j <= op_x+1; j = j + 1)
                                 if (image[i][j] < temp_value)
@@ -93,8 +96,9 @@ module LCD_CTRL(
                             for (j = op_x-2; j <= op_x+1; j = j + 1)
                                 image[i][j] <= temp_value;
                     end
-                    4'd7: begin // Average
-                        sum = 0;
+                    // Average
+                    4'd7: begin 
+                        sum = 16'd0;
                         for (i = op_y-2; i <= op_y+1; i = i + 1)
                             for (j = op_x-2; j <= op_x+1; j = j + 1)
                                 sum = sum + image[i][j];
@@ -103,7 +107,6 @@ module LCD_CTRL(
                             for (j = op_x-2; j <= op_x+1; j = j + 1)
                                 image[i][j] <= temp_value;
                     end
-                    
                     default: ;
                 endcase
             end
@@ -159,14 +162,7 @@ module LCD_CTRL(
                 next_state = IDLE;
             end
 
-            default: begin
-                next_state = IDLE;
-                IROM_rd = 1'b0;
-                IRAM_ceb = 1'b0;
-                IRAM_web = 1'b1;
-                busy = 1'b1;
-                done = 1'b0;
-            end
+            default: ; 
         endcase
     end
 
